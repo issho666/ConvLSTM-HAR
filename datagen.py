@@ -1,41 +1,45 @@
 import cv2
-from sklearn.utils import shuffle
 import numpy as np
-import time
 import pandas as pd
 import os
 import collections
 import subprocess
 import glob
-import json
-# import imutils
+from math import floor, ceil
+from sklearn.utils import shuffle
 
 IMAGE = (64,64)
-T = 24
+T = 10
 
+IMAGE = (64,64)
+T = 10
 def video_to_frames(path_to_vid):
-    frm_list = []
-    
-    no_of_frames, no_of_frames_extracted = 0, 0
+   
     cap = cv2.VideoCapture(path_to_vid)
+    n_frames = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+    frm_list = []
+    counter = 0
+    valid_from = ceil(0.15*n_frames)
+    valid_to = floor(0.1*n_frames)
+    num_frames = n_frames-valid_from-valid_to
+    frame_to_count = floor(num_frames/T)
+    no_of_frames_extracted = 0
     while no_of_frames_extracted < T:
-        retval, frame = cap.read()
-        if retval:
-            if no_of_frames%10==0:
-                image = cv2.resize(frame,IMAGE)
-                frm_list.append(image)
+        ret, frame = cap.read()
+        if ret==True:
+            if counter>=valid_from and (counter-valid_from)//frame_to_count==0:
+                img = cv2.resize(frame,IMAGE)
+                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                np.expand_dims(gray,axis=1)
+                frm_list.append(gray)
                 no_of_frames_extracted+=1
-                no_of_frames+=1
+                counter+=1
             else:
-                no_of_frames+=1
+                counter+=1
         else:
-            print("Insfitient frames")
-            # print(no_of_frames, no_of_frames_extracted)
             break
+            
     return frm_list
-
-# list1 = video_to_frames('/home/tarun/Kinetic600/kinetics-downloader/dataset/train/juggling_balls/0NfMPvv-qLo.mp4')
-# print(len(list1))
 
 def data_generator(input_dir,input_class):
     X = []
@@ -59,46 +63,8 @@ def data_generator(input_dir,input_class):
             
     X = np.asarray(X)
     Y = np.asarray(Y)
+    return np.expand_dims(X,-1),Y
+            
+    X = np.asarray(X)
+    Y = np.asarray(Y)
     return X,Y
-
-# X,Y = data_generator('/home/tarun/Kinetic600/kinetics-downloader/dataset/train/juggling_balls',1)
-
-# print(len(X))
-
-# X1,Y1 = data_generator('/home/tarun/Kinetic600/kinetics-downloader/dataset/train/juggling_balls',0)
-# X2,Y2 = data_generator('/home/tarun/Kinetic600/kinetics-downloader/dataset/train/punching_bag',1)
-
-# X_train = np.concatenate((X1, X2))
-# y_train = np.concatenate((Y1, Y2))
-
-# X_train,y_train = shuffle(X_train,y_train)
-
-X_test1,y_test1 = data_generator('/home/tarun/Kinetic600/kinetics-downloader/dataset/valid/juggling_balls',0)
-X_test2,y_test2 = data_generator('/home/tarun/Kinetic600/kinetics-downloader/dataset/valid/punching_bag',1)
-
-X_test = np.concatenate((X_test1, X_test2))
-y_test = np.concatenate((y_test1, y_test2))
-
-X_test,y_test = shuffle(X_test,y_test)
-
-print(X_test)
-print(X_test.shape)
-print(y_test)
-print(y_test.shape)
-
-# res_train = dict(zip(X_train, y_train))
-# res_test = np.array(zip(X_test,y_test))
-
-# with open('train.json', 'w') as f:
-#     json.dump(res_train, f)
-
-# with open('test.json', 'w') as f:
-#     json.dump(res_test, f)
-
-# print(res_test)
-# print(res_test.shape)
-
-my_dict= {}
-
-print(len(X_test))
-print(X_test[1])

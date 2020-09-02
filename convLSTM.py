@@ -28,26 +28,26 @@ y_test = np.concatenate((y_test1, y_test2))
 
 X_test,y_test = shuffle(X_test,y_test)
 
-T = 10
+T = 30
 IMAGE = (64,64)
-i = Input(shape=(T, 64, 64, 1))
-x = ConvLSTM2D(filters=64, kernel_size=(3,3), padding='same',return_sequences = True)(i)
-# x = BatchNormalization()(x)
-x = Dropout(0.2)(x)
-# x = ConvLSTM2D(filters=64, kernel_size=(3,3), padding='same',return_sequences = False)(x)
-# x = Dropout(0.2)(x)
-x = Flatten()(x)
-x = Dense(64, activation="relu")(x)
-x = Dropout(0.3)(x)
-x = Dense(2,activation='softmax')(x)
+i = Input(shape=(T, 3, 128, 128))
 
-model = Model(i,x)
-model.compile(optimizer= tf.keras.optimizers.RMSprop(learning_rate=0.001, rho=0.9),loss='binary_crossentropy',metrics=['accuracy'])
-
+def myConv(model):
+    model = ConvLSTM2D(filters=64, kernel_size=(5,5), padding='same',return_sequences = True)(model)
+    model = BatchNormalization()(model)
+    model = Dropout(0.2)(model)
+    model = ConvLSTM2D(filters=128, kernel_size=(5,5), padding='same',return_sequences = False)(model)
+    model = Dropout(0.2)(model)
+    model = Flatten()(model)
+    model = Dense(256, activation="relu")(model)
+    model = Dropout(0.3)(model)
+    model = Dense(2,activation='softmax')(model)
+    
+    return model
+model = myConv(i)
+model = Model(i,model)
+opt = tf.keras.optimizers.SGD(lr=0.001)
+model.compile(optimizer= opt,loss='categorical_crossentropy',metrics=['accuracy'])
 model.summary()
 
-r = model.fit(X_test,y_test,batch_size=2,epochs=10)
-score = model.evaluate(X_test, y_test, verbose=0)
-print('Test loss:', score[0])
-print('Test accuracy:', score[1])
-model.save('test.h5')
+r = model.fit(X_train,y_train,validation_data=(X_test, y_test),batch_size=8,epochs=30)
